@@ -33,7 +33,6 @@
         .header-title h1 { margin: 0; font-size: 22px; color: #fff; }
         .header-title p { margin: 5px 0 0 0; font-size: 13px; color: #aaa; }
 
-        /* TODAS LAS TARJETAS ESTÁN VISIBLES AL MISMO TIEMPO */
         .module-card {
             background-color: var(--panel-color);
             padding: 20px;
@@ -48,7 +47,6 @@
         h2 { margin-top: 0; font-size: 18px; display: flex; align-items: center; gap: 8px; }
         .desc { color: #aaa; font-size: 12px; margin-bottom: 15px; line-height: 1.4; }
 
-        /* CONTENEDOR DE ENTRADA DIRECTA */
         .file-box {
             background: rgba(0,0,0,0.2);
             border: 1px dashed #3b4261;
@@ -65,7 +63,6 @@
             margin-bottom: 6px;
         }
 
-        /* Input nativo visible y estilizado para evitar fallos de seguridad */
         .real-input {
             background-color: #242838;
             color: #fff;
@@ -115,6 +112,7 @@
         <p>Desliza hacia abajo para usar la herramienta que necesites</p>
     </div>
 
+    <!-- 1. CHARACTER OPTIMIZER -->
     <div class="module-card" style="border-top: 4px solid var(--accent-purple);">
         <h2 style="color: var(--accent-purple);">👤 1. Character Optimizer (Sparrow)</h2>
         <div class="desc">Recorta las cajas transparentes excedentes de hojas de sprites de personajes (.xml + .png).</div>
@@ -135,7 +133,7 @@
         <div id="console-char" class="console"></div>
     </div>
 
-
+    <!-- 2. STAGE BACKGROUND MASTER -->
     <div class="module-card" style="border-top: 4px solid var(--accent-purple);">
         <h2 style="color: var(--accent-purple);">⛰️ 2. Stage Background Master</h2>
         <div class="desc">Optimiza fondos y escenarios para reducir drásticamente el consumo de memoria RAM.</div>
@@ -174,7 +172,7 @@
         <div id="console-stage" class="console" style="margin-top:10px;"></div>
     </div>
 
-
+    <!-- 3. ADOBE ANIMATE SPRITEMAP OPTIMIZER -->
     <div class="module-card" style="border-top: 4px solid var(--accent-cyan);">
         <h2 style="color: var(--accent-cyan);">🎬 3. Adobe Animate Spritemap Optimizer</h2>
         <div class="desc">Optimiza atlas de Adobe Animate recortando transparencias usando `spritemap1.json` y `spritemap1.png` sin romper pivots.</div>
@@ -268,7 +266,6 @@
         };
 
         // --- LÓGICA 2: STAGES ---
-        // Opción A: Atlas
         let sImg = new Image(), sXml = "", sName = "stage_atlas";
         document.getElementById('stPng').onchange = function() {
             if(!this.files.length) return;
@@ -335,7 +332,6 @@
             box.innerHTML = "✓ ¡Stage Atlas optimizado!";
         };
 
-        // Opción B: Múltiples
         document.getElementById('stMulti').onchange = function() {
             document.getElementById('status-stMulti').innerText = "✓ " + this.files.length + " imágenes listas";
             document.getElementById('status-stMulti').style.color = "#10b981";
@@ -357,7 +353,6 @@
             box.innerHTML = "✓ ¡Todas las imágenes múltiples optimizadas!";
         };
 
-        // Opción C: Imagen Única
         let singleImgSrc = new Image(), singleName = "asset";
         document.getElementById('stSingle').onchange = function() {
             if(!this.files.length) return;
@@ -382,4 +377,44 @@
             if(!this.files.length) return;
             aName = this.files[0].name.replace(/\.[^/.]+$/, "");
             document.getElementById('status-aniPng').innerText = "✓ " + this.files[0].name;
-            document.getElementById('status
+            document.getElementById('status-aniPng').style.color = "#10b981";
+            let r = new FileReader(); r.onload = (e) => aImg.src = e.target.result; r.readAsDataURL(this.files[0]);
+        };
+        document.getElementById('aniJson').onchange = function() {
+            if(!this.files.length) return;
+            document.getElementById('status-aniJson').innerText = "✓ " + this.files[0].name;
+            document.getElementById('status-aniJson').style.color = "#10b981";
+            let r = new FileReader(); r.onload = (e) => { try { aJson = JSON.parse(e.target.result); } catch(err) { alert("JSON Inválido"); } }; r.readAsText(this.files[0]);
+        };
+        document.getElementById('btnRunAni').onclick = function() {
+            let box = document.getElementById('console-ani'); box.style.display = "block";
+            if(!aJson || !aImg.src) { box.innerHTML = "❌ Carga los archivos .png y .json de Animate primero."; return; }
+            box.innerHTML = "Optimizado Spritemap...";
+
+            let srcCanvas = document.createElement('canvas'); srcCanvas.width = aImg.width; srcCanvas.height = aImg.height;
+            srcCanvas.getContext('2d').drawImage(aImg, 0, 0);
+
+            let outCanvas = document.createElement('canvas'); let outCtx = outCanvas.getContext('2d');
+            let totalHeight = 0, maxWidth = 0;
+
+            for(let spr of aJson.meta.sprites) {
+                if(spr.w > maxWidth) maxWidth = spr.w;
+                totalHeight += spr.h + 4;
+            }
+            outCanvas.width = maxWidth + 4; outCanvas.height = totalHeight + 4;
+
+            let currentY = 2;
+            for(let spr of aJson.meta.sprites) {
+                outCtx.drawImage(srcCanvas, spr.x, spr.y, spr.w, spr.h, 2, currentY, spr.w, spr.h);
+                spr.x = 2;
+                spr.y = currentY;
+                currentY += spr.h + 4;
+            }
+
+            download(outCanvas.toDataURL('image/png'), `${aName}_optimized.png`);
+            download(URL.createObjectURL(new Blob([JSON.stringify(aJson, null, 2)], {type: "application/json"})), `${aName}_optimized.json`);
+            box.innerHTML = "✓ ¡Spritemap de Adobe Animate optimizado!";
+        };
+    </script>
+</body>
+</html>
