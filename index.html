@@ -1,255 +1,446 @@
-<script>
-    function download(url, name) {
-        let a = document.createElement('a'); a.download = name; a.href = url; a.click();
-    }
-
-    // Función auxiliar para cambiar el estado visual de forma segura
-    function actualizarEstado(idInput, text, color) {
-        let el = document.getElementById('status-' + idInput);
-        if(el) {
-            el.innerText = text;
-            el.style.color = color;
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FNF Universal Mod Optimizer</title>
+    <style>
+        :root {
+            --bg-color: #090a0f;
+            --panel-color: #12141c;
+            --accent-purple: #a855f7;
+            --accent-cyan: #06b6d4;
+            --accent-green: #10b981;
+            --text-color: #ffffff;
+            --border-color: #242838;
         }
-    }
 
-    // --- LÓGICA 1: PERSONAJES ---
-    let cImg = new Image(), cXml = "", cName = "character";
-    
-    document.getElementById('charPng').addEventListener('change', function() {
-        if(!this.files.length) return;
-        cName = this.files[0].name.replace(/\.[^/.]+$/, "");
-        actualizarEstado('charPng', "✓ " + this.files[0].name, "#10b981");
-        let r = new FileReader(); r.onload = (e) => cImg.src = e.target.result; r.readAsDataURL(this.files[0]);
-    });
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
 
-    document.getElementById('charXml').addEventListener('change', function() {
-        if(!this.files.length) return;
-        actualizarEstado('charXml', "✓ " + this.files[0].name, "#10b981");
-        let r = new FileReader(); r.onload = (e) => cXml = e.target.result; r.readAsText(this.files[0]);
-    });
+        .header-title {
+            text-align: center;
+            margin: 15px 0;
+        }
+        .header-title h1 { margin: 0; font-size: 22px; color: #fff; }
+        .header-title p { margin: 5px 0 0 0; font-size: 13px; color: #aaa; }
 
-    document.getElementById('btnRunChar').addEventListener('click', function() {
-        let box = document.getElementById('console-char'); box.style.display = "block";
-        if(!cXml || !cImg.src) { box.innerHTML = "❌ Carga los archivos PNG y XML primero."; return; }
-        box.innerHTML = "Procesando personaje...";
+        .module-card {
+            background-color: var(--panel-color);
+            padding: 20px;
+            border-radius: 12px;
+            max-width: 550px;
+            width: 100%;
+            box-sizing: border-box;
+            border: 1px solid var(--border-color);
+            margin-bottom: 25px;
+        }
+
+        h2 { margin-top: 0; font-size: 18px; display: flex; align-items: center; gap: 8px; }
+        .desc { color: #aaa; font-size: 12px; margin-bottom: 15px; line-height: 1.4; }
+
+        .file-box {
+            background: rgba(0,0,0,0.2);
+            border: 1px dashed #3b4261;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+
+        .file-box label {
+            display: block;
+            font-weight: bold;
+            font-size: 12px;
+            color: #ddd;
+            margin-bottom: 6px;
+        }
+
+        .real-input {
+            background-color: #242838;
+            color: #fff;
+            border: 1px solid #4f567a;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
+            cursor: pointer;
+        }
+
+        .status-text { font-size: 12px; color: #ff4560; font-weight: 500; margin-top: 5px; }
+
+        .action-btn {
+            width: 100%;
+            color: white;
+            border: none;
+            padding: 14px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 5px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        .btn-purple { background: linear-gradient(45deg, var(--accent-purple), #7c3aed); }
+        .btn-cyan { background: linear-gradient(45deg, var(--accent-cyan), #0284c7); }
+
+        .console {
+            margin-top: 10px;
+            padding: 12px;
+            border-radius: 6px;
+            background: rgba(0,0,0,0.5);
+            font-size: 13px;
+            display: none;
+            border-left: 4px solid var(--accent-green);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-title">
+        <h1>⚡ FNF Universal Mod Optimizer</h1>
+        <p>Desliza hacia abajo para usar la herramienta que necesites</p>
+    </div>
+
+    <div class="module-card" style="border-top: 4px solid var(--accent-purple);">
+        <h2 style="color: var(--accent-purple);">👤 1. Character Optimizer (Sparrow)</h2>
+        <div class="desc">Recorta las cajas transparentes excedentes de hojas de sprites de personajes (.xml + .png).</div>
         
-        try {
-            let xmlDoc = new DOMParser().parseFromString(cXml, "text/xml");
-            let subTextures = xmlDoc.getElementsByTagName("SubTexture");
-            let srcCanvas = document.createElement('canvas'); srcCanvas.width = cImg.width; srcCanvas.height = cImg.height;
-            srcCanvas.getContext('2d').drawImage(cImg, 0, 0);
+        <div class="file-box">
+            <label>Hoja de Sprites (.png):</label>
+            <input type="file" id="charPng" class="real-input" accept="image/png">
+            <div id="status-charPng" class="status-text">Sin cargar</div>
+        </div>
 
-            let outCanvas = document.createElement('canvas'); let outCtx = outCanvas.getContext('2d');
-            let frames = [], totalHeight = 0, maxWidth = 0;
+        <div class="file-box">
+            <label>Archivo Sparrow (.xml):</label>
+            <input type="file" id="charXml" class="real-input" accept=".xml">
+            <div id="status-charXml" class="status-text">Sin cargar</div>
+        </div>
 
-            for(let i=0; i<subTextures.length; i++) {
-                let st = subTextures[i];
-                let x = parseInt(st.getAttribute('x')), y = parseInt(st.getAttribute('y'));
-                let w = parseInt(st.getAttribute('width')), h = parseInt(st.getAttribute('height'));
-                let isRotated = st.getAttribute('rotated') === "true";
-                let cw = isRotated ? h : w, ch = isRotated ? w : h;
-                let imgData = srcCanvas.getContext('2d').getImageData(x, y, cw, ch);
-                let p = imgData.data; let minX = cw, minY = ch, maxX = 0, maxY = 0, any = false;
+        <button id="btnRunChar" class="action-btn btn-purple">Optimizar Personaje</button>
+        <div id="console-char" class="console"></div>
+    </div>
 
-                for(let fy=0; fy<ch; fy++) {
-                    for(let fx=0; fx<cw; fx++) {
-                        if(p[(fy * cw + fx) * 4 + 3] > 8) {
-                            if(fx < minX) minX = fx; if(fx > maxX) maxX = fx;
-                            if(fy < minY) minY = fy; if(fy > maxY) maxY = fy;
-                            any = true;
+    <div class="module-card" style="border-top: 4px solid var(--accent-purple);">
+        <h2 style="color: var(--accent-purple);">⛰️ 2. Stage Background Master</h2>
+        <div class="desc">Optimiza fondos y escenarios para reducir drásticamente el consumo de memoria RAM.</div>
+
+        <div style="background: rgba(0,0,0,0.15); padding: 10px; border-radius: 6px; margin-bottom: 15px;">
+            <b style="font-size:13px; color:#e9d5ff;">Opción A: Hoja Completa + Archivo XML</b>
+            <div class="file-box" style="margin-top:8px; border-color: #581c87;">
+                <input type="file" id="stPng" class="real-input" accept="image/png">
+                <div id="status-stPng" class="status-text">Sin cargar</div>
+            </div>
+            <div class="file-box" style="border-color: #581c87;">
+                <input type="file" id="stXml" class="real-input" accept=".xml">
+                <div id="status-stXml" class="status-text">Sin cargar</div>
+            </div>
+            <button id="btnRunStAtlas" class="action-btn btn-purple" style="padding:10px; font-size:12px;">Optimizar Stage con XML</button>
+        </div>
+
+        <div style="background: rgba(0,0,0,0.15); padding: 10px; border-radius: 6px; margin-bottom: 15px;">
+            <b style="font-size:13px; color:#e9d5ff;">Opción B: Varias imágenes/capas sueltas</b>
+            <div class="file-box" style="margin-top:8px; border-color: #581c87;">
+                <input type="file" id="stMulti" class="real-input" accept="image/png" multiple>
+                <div id="status-stMulti" class="status-text">Sin cargar</div>
+            </div>
+            <button id="btnRunStMulti" class="action-btn btn-purple" style="padding:10px; font-size:12px;">Optimizar Capas Múltiples</button>
+        </div>
+
+        <div style="background: rgba(0,0,0,0.15); padding: 10px; border-radius: 6px;">
+            <b style="font-size:13px; color:#e9d5ff;">Opción C: Una sola imagen / Asset individual (.png)</b>
+            <div class="file-box" style="margin-top:8px; border-color: #581c87;">
+                <input type="file" id="stSingle" class="real-input" accept="image/png">
+                <div id="status-stSingle" class="status-text">Sin cargar</div>
+            </div>
+            <button id="btnRunStSingle" class="action-btn btn-purple" style="padding:10px; font-size:12px;">Optimizar Asset Único</button>
+        </div>
+        
+        <div id="console-stage" class="console" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="module-card" style="border-top: 4px solid var(--accent-cyan);">
+        <h2 style="color: var(--accent-cyan);">🎬 3. Adobe Animate Spritemap Optimizer</h2>
+        <div class="desc">Optimiza atlas de Adobe Animate recortando transparencias usando `spritemap1.json` y `spritemap1.png` sin romper pivots.</div>
+
+        <div class="file-box">
+            <label>Imagen del Spritemap (.png):</label>
+            <input type="file" id="aniPng" class="real-input" accept="image/png">
+            <div id="status-aniPng" class="status-text">Sin cargar</div>
+        </div>
+
+        <div class="file-box">
+            <label>Diccionario de Sprites (spritemap1.json):</label>
+            <input type="file" id="aniJson" class="real-input" accept=".json">
+            <div id="status-aniJson" class="status-text">Sin cargar</div>
+        </div>
+
+        <button id="btnRunAni" class="action-btn btn-cyan">Optimizar Spritemap JSON</button>
+        <div id="console-ani" class="console"></div>
+    </div>
+
+    <script>
+        function download(url, name) {
+            let a = document.createElement('a'); a.download = name; a.href = url; a.click();
+        }
+
+        // Cambiar estados de forma ultra segura protegiendo de bloqueos
+        function cambiarEstado(id, texto, exito) {
+            let el = document.getElementById(id);
+            if(el) {
+                el.innerText = texto;
+                el.style.color = exito ? "#10b981" : "#ff4560";
+            }
+        }
+
+        // --- LÓGICA 1: PERSONAJES ---
+        let cImg = new Image(), cXml = "", cName = "character";
+        
+        document.getElementById('charPng').addEventListener('change', function() {
+            if(!this.files.length) return;
+            cName = this.files[0].name.replace(/\.[^/.]+$/, "");
+            cambiarEstado('status-charPng', "✓ " + this.files[0].name, true);
+            let r = new FileReader(); r.onload = (e) => cImg.src = e.target.result; r.readAsDataURL(this.files[0]);
+        });
+
+        document.getElementById('charXml').addEventListener('change', function() {
+            if(!this.files.length) return;
+            cambiarEstado('status-charXml', "✓ " + this.files[0].name, true);
+            let r = new FileReader(); r.onload = (e) => cXml = e.target.result; r.readAsText(this.files[0]);
+        });
+
+        document.getElementById('btnRunChar').addEventListener('click', function() {
+            let box = document.getElementById('console-char'); box.style.display = "block";
+            if(!cXml || !cImg.src) { box.innerHTML = "❌ Carga los archivos PNG y XML primero."; return; }
+            box.innerHTML = "Procesando personaje...";
+            
+            try {
+                let xmlDoc = new DOMParser().parseFromString(cXml, "text/xml");
+                let subTextures = xmlDoc.getElementsByTagName("SubTexture");
+                let srcCanvas = document.createElement('canvas'); srcCanvas.width = cImg.width; srcCanvas.height = cImg.height;
+                srcCanvas.getContext('2d').drawImage(cImg, 0, 0);
+
+                let outCanvas = document.createElement('canvas'); let outCtx = outCanvas.getContext('2d');
+                let frames = [], totalHeight = 0, maxWidth = 0;
+
+                for(let i=0; i<subTextures.length; i++) {
+                    let st = subTextures[i];
+                    let x = parseInt(st.getAttribute('x')), y = parseInt(st.getAttribute('y'));
+                    let w = parseInt(st.getAttribute('width')), h = parseInt(st.getAttribute('height'));
+                    let isRotated = st.getAttribute('rotated') === "true";
+                    let cw = isRotated ? h : w, ch = isRotated ? w : h;
+                    let imgData = srcCanvas.getContext('2d').getImageData(x, y, cw, ch);
+                    let p = imgData.data; let minX = cw, minY = ch, maxX = 0, maxY = 0, any = false;
+
+                    for(let fy=0; fy<ch; fy++) {
+                        for(let fx=0; fx<cw; fx++) {
+                            if(p[(fy * cw + fx) * 4 + 3] > 8) {
+                                if(fx < minX) minX = fx; if(fx > maxX) maxX = fx;
+                                if(fy < minY) minY = fy; if(fy > maxY) maxY = fy;
+                                any = true;
+                            }
                         }
                     }
+                    if(!any) { minX = 0; minY = 0; maxX = 5; maxY = 5; }
+                    let finalW = (maxX - minX) + 1, finalH = (maxY - minY) + 1;
+                    frames.push({ element: st, x: x + minX, y: y + minY, w: finalW, h: finalH, trimX: minX, trimY: minY });
+                    if(finalW > maxWidth) maxWidth = finalW; totalHeight += finalH + 4;
                 }
-                if(!any) { minX = 0; minY = 0; maxX = 5; maxY = 5; }
-                let finalW = (maxX - minX) + 1, finalH = (maxY - minY) + 1;
-                frames.push({ element: st, x: x + minX, y: y + minY, w: finalW, h: finalH, trimX: minX, trimY: minY });
-                if(finalW > maxWidth) maxWidth = finalW; totalHeight += finalH + 4;
+
+                outCanvas.width = maxWidth + 4; outCanvas.height = totalHeight + 4;
+                let currentY = 2;
+                for(let f of frames) {
+                    if(f.w > 0 && f.h > 0) outCtx.drawImage(srcCanvas, f.x, f.y, f.w, f.h, 2, currentY, f.w, f.h);
+                    let fx = parseInt(f.element.getAttribute('frameX') || 0), fy = parseInt(f.element.getAttribute('frameY') || 0);
+                    f.element.setAttribute('x', "2"); f.element.setAttribute('y', currentY.toString());
+                    f.element.setAttribute('width', f.w.toString()); f.element.setAttribute('height', f.h.toString());
+                    f.element.setAttribute('frameX', (fx - f.trimX).toString()); f.element.setAttribute('frameY', (fy - f.trimY).toString());
+                    currentY += f.h + 4;
+                }
+                download(outCanvas.toDataURL('image/png'), `${cName}_optimized.png`);
+                download(URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(xmlDoc)], {type: "text/xml"})), `${cName}_optimized.xml`);
+                box.innerHTML = "✓ ¡Personaje Optimizado!";
+            } catch(err) {
+                box.innerHTML = "❌ Error: " + err.message;
             }
+        });
 
-            outCanvas.width = maxWidth + 4; outCanvas.height = totalHeight + 4;
-            let currentY = 2;
-            for(let f of frames) {
-                if(f.w > 0 && f.h > 0) outCtx.drawImage(srcCanvas, f.x, f.y, f.w, f.h, 2, currentY, f.w, f.h);
-                let fx = parseInt(f.element.getAttribute('frameX') || 0), fy = parseInt(f.element.getAttribute('frameY') || 0);
-                f.element.setAttribute('x', "2"); f.element.setAttribute('y', currentY.toString());
-                f.element.setAttribute('width', f.w.toString()); f.element.setAttribute('height', f.h.toString());
-                f.element.setAttribute('frameX', (fx - f.trimX).toString()); f.element.setAttribute('frameY', (fy - f.trimY).toString());
-                currentY += f.h + 4;
-            }
-            download(outCanvas.toDataURL('image/png'), `${cName}_optimized.png`);
-            download(URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(xmlDoc)], {type: "text/xml"})), `${cName}_optimized.xml`);
-            box.innerHTML = "✓ ¡Personaje Optimizado!";
-        } catch(err) {
-            box.innerHTML = "❌ Error al procesar: " + err.message;
-        }
-    });
+        // --- LÓGICA 2: STAGES ---
+        let sImg = new Image(), sXml = "", sName = "stage_atlas";
+        
+        document.getElementById('stPng').addEventListener('change', function() {
+            if(!this.files.length) return;
+            sName = this.files[0].name.replace(/\.[^/.]+$/, "");
+            cambiarEstado('status-stPng', "✓ " + this.files[0].name, true);
+            let r = new FileReader(); r.onload = (e) => sImg.src = e.target.result; r.readAsDataURL(this.files[0]);
+        });
 
-    // --- LÓGICA 2: STAGES ---
-    let sImg = new Image(), sXml = "", sName = "stage_atlas";
-    
-    document.getElementById('stPng').addEventListener('change', function() {
-        if(!this.files.length) return;
-        sName = this.files[0].name.replace(/\.[^/.]+$/, "");
-        actualizarEstado('stPng', "✓ " + this.files[0].name, "#10b981");
-        let r = new FileReader(); r.onload = (e) => sImg.src = e.target.result; r.readAsDataURL(this.files[0]);
-    });
+        document.getElementById('stXml').addEventListener('change', function() {
+            if(!this.files.length) return;
+            cambiarEstado('status-stXml', "✓ " + this.files[0].name, true);
+            let r = new FileReader(); r.onload = (e) => sXml = e.target.result; r.readAsText(this.files[0]);
+        });
 
-    document.getElementById('stXml').addEventListener('change', function() {
-        if(!this.files.length) return;
-        actualizarEstado('stXml', "✓ " + this.files[0].name, "#10b981");
-        let r = new FileReader(); r.onload = (e) => sXml = e.target.result; r.readAsText(this.files[0]);
-    });
+        document.getElementById('btnRunStAtlas').addEventListener('click', function() {
+            let box = document.getElementById('console-stage'); box.style.display = "block";
+            if(!sXml || !sImg.src) { box.innerHTML = "❌ Carga los archivos del Atlas del stage."; return; }
+            box.innerHTML = "Procesando Stage Atlas...";
 
-    document.getElementById('btnRunStAtlas').addEventListener('click', function() {
-        let box = document.getElementById('console-stage'); box.style.display = "block";
-        if(!sXml || !sImg.src) { box.innerHTML = "❌ Carga los archivos del Atlas del stage."; return; }
-        box.innerHTML = "Procesando Stage Atlas...";
+            try {
+                let xmlDoc = new DOMParser().parseFromString(sXml, "text/xml");
+                let subTextures = xmlDoc.getElementsByTagName("SubTexture");
+                let srcCanvas = document.createElement('canvas'); srcCanvas.width = sImg.width; srcCanvas.height = sImg.height;
+                srcCanvas.getContext('2d').drawImage(sImg, 0, 0);
 
-        try {
-            let xmlDoc = new DOMParser().parseFromString(sXml, "text/xml");
-            let subTextures = xmlDoc.getElementsByTagName("SubTexture");
-            let srcCanvas = document.createElement('canvas'); srcCanvas.width = sImg.width; srcCanvas.height = sImg.height;
-            srcCanvas.getContext('2d').drawImage(sImg, 0, 0);
+                let outCanvas = document.createElement('canvas'); let outCtx = outCanvas.getContext('2d');
+                let frames = [], totalHeight = 0, maxWidth = 0;
 
-            let outCanvas = document.createElement('canvas'); let outCtx = outCanvas.getContext('2d');
-            let frames = [], totalHeight = 0, maxWidth = 0;
+                for(let i=0; i<subTextures.length; i++) {
+                    let st = subTextures[i];
+                    let x = parseInt(st.getAttribute('x')), y = parseInt(st.getAttribute('y'));
+                    let w = parseInt(st.getAttribute('width')), h = parseInt(st.getAttribute('height'));
+                    let isRotated = st.getAttribute('rotated') === "true";
+                    let cw = isRotated ? h : w, ch = isRotated ? w : h;
+                    let imgData = srcCanvas.getContext('2d').getImageData(x, y, cw, ch);
+                    let p = imgData.data; let minX = cw, minY = ch, maxX = 0, maxY = 0, any = false;
 
-            for(let i=0; i<subTextures.length; i++) {
-                let st = subTextures[i];
-                let x = parseInt(st.getAttribute('x')), y = parseInt(st.getAttribute('y'));
-                let w = parseInt(st.getAttribute('width')), h = parseInt(st.getAttribute('height'));
-                let isRotated = st.getAttribute('rotated') === "true";
-                let cw = isRotated ? h : w, ch = isRotated ? w : h;
-                let imgData = srcCanvas.getContext('2d').getImageData(x, y, cw, ch);
-                let p = imgData.data; let minX = cw, minY = ch, maxX = 0, maxY = 0, any = false;
-
-                for(let fy=0; fy<ch; fy++) {
-                    for(let fx=0; fx<cw; fx++) {
-                        if(p[(fy * cw + fx) * 4 + 3] > 8) {
-                            if(fx < minX) minX = fx; if(fx > maxX) maxX = fx;
-                            if(fy < minY) minY = fy; if(fy > maxY) maxY = fy;
-                            any = true;
+                    for(let fy=0; fy<ch; fy++) {
+                        for(let fx=0; fx<cw; fx++) {
+                            if(p[(fy * cw + fx) * 4 + 3] > 8) {
+                                if(fx < minX) minX = fx; if(fx > maxX) maxX = fx;
+                                if(fy < minY) minY = fy; if(fy > maxY) maxY = fy;
+                                any = true;
+                            }
                         }
                     }
+                    if(!any) { minX = 0; minY = 0; maxX = 5; maxY = 5; }
+                    let finalW = (maxX - minX) + 1, finalH = (maxY - minY) + 1;
+                    frames.push({ element: st, x: x + minX, y: y + minY, w: finalW, h: finalH, trimX: minX, trimY: minY });
+                    if(finalW > maxWidth) maxWidth = finalW; totalHeight += finalH + 4;
                 }
-                if(!any) { minX = 0; minY = 0; maxX = 5; maxY = 5; }
-                let finalW = (maxX - minX) + 1, finalH = (maxY - minY) + 1;
-                frames.push({ element: st, x: x + minX, y: y + minY, w: finalW, h: finalH, trimX: minX, trimY: minY });
-                if(finalW > maxWidth) maxWidth = finalW; totalHeight += finalH + 4;
+
+                outCanvas.width = maxWidth + 4; outCanvas.height = totalHeight + 4;
+                let currentY = 2;
+                for(let f of frames) {
+                    if(f.w > 0 && f.h > 0) outCtx.drawImage(srcCanvas, f.x, f.y, f.w, f.h, 2, currentY, f.w, f.h);
+                    let fx = parseInt(f.element.getAttribute('frameX') || 0), fy = parseInt(f.element.getAttribute('frameY') || 0);
+                    f.element.setAttribute('x', "2"); f.element.setAttribute('y', currentY.toString());
+                    f.element.setAttribute('width', f.w.toString()); f.element.setAttribute('height', f.h.toString());
+                    f.element.setAttribute('frameX', (fx - f.trimX).toString()); f.element.setAttribute('frameY', (fy - f.trimY).toString());
+                    currentY += f.h + 4;
+                }
+                download(outCanvas.toDataURL('image/png'), `${sName}_optimized.png`);
+                download(URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(xmlDoc)], {type: "text/xml"})), `${sName}_optimized.xml`);
+                box.innerHTML = "✓ ¡Stage Atlas optimizado!";
+            } catch(err) {
+                box.innerHTML = "❌ Error: " + err.message;
             }
+        });
 
-            outCanvas.width = maxWidth + 4; outCanvas.height = totalHeight + 4;
-            let currentY = 2;
-            for(let f of frames) {
-                if(f.w > 0 && f.h > 0) outCtx.drawImage(srcCanvas, f.x, f.y, f.w, f.h, 2, currentY, f.w, f.h);
-                let fx = parseInt(f.element.getAttribute('frameX') || 0), fy = parseInt(f.element.getAttribute('frameY') || 0);
-                f.element.setAttribute('x', "2"); f.element.setAttribute('y', currentY.toString());
-                f.element.setAttribute('width', f.w.toString()); f.element.setAttribute('height', f.h.toString());
-                f.element.setAttribute('frameX', (fx - f.trimX).toString()); f.element.setAttribute('frameY', (fy - f.trimY).toString());
-                currentY += f.h + 4;
+        document.getElementById('stMulti').addEventListener('change', function() {
+            if(!this.files.length) return;
+            cambiarEstado('status-stMulti', "✓ " + this.files.length + " imágenes listas", true);
+        });
+
+        document.getElementById('btnRunStMulti').addEventListener('click', async function() {
+            let box = document.getElementById('console-stage'); box.style.display = "block";
+            let files = document.getElementById('stMulti').files;
+            if(!files.length) { box.innerHTML = "❌ Sube archivos png."; return; }
+
+            try {
+                for(let i=0; i<files.length; i++) {
+                    let file = files[i];
+                    box.innerHTML = `Comprimiendo sueltas [${i+1}/${files.length}]...`;
+                    let img = await new Promise(res => { let r = new FileReader(); r.onload = (e) => { let im = new Image(); im.onload = () => res(im); im.src = e.target.result; }; r.readAsDataURL(file); });
+                    let canvas = document.createElement('canvas');
+                    canvas.width = Math.round(img.width * 0.85); canvas.height = Math.round(img.height * 0.85);
+                    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                    download(canvas.toDataURL('image/png'), file.name.replace(/\.[^/.]+$/, "") + "_optimized.png");
+                }
+                box.innerHTML = "✓ ¡Todas las imágenes múltiples optimizadas!";
+            } catch(err) {
+                box.innerHTML = "❌ Error: " + err.message;
             }
-            download(outCanvas.toDataURL('image/png'), `${sName}_optimized.png`);
-            download(URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(xmlDoc)], {type: "text/xml"})), `${sName}_optimized.xml`);
-            box.innerHTML = "✓ ¡Stage Atlas optimizado!";
-        } catch(err) {
-            box.innerHTML = "❌ Error: " + err.message;
-        }
-    });
+        });
 
-    document.getElementById('stMulti').addEventListener('change', function() {
-        let el = document.getElementById('status-stMulti');
-        if(el) {
-            el.innerText = "✓ " + this.files.length + " imágenes listas";
-            el.style.color = "#10b981";
-        }
-    });
+        let singleImgSrc = new Image(), singleName = "asset";
+        document.getElementById('stSingle').addEventListener('change', function() {
+            if(!this.files.length) return;
+            singleName = this.files[0].name.replace(/\.[^/.]+$/, "");
+            cambiarEstado('status-stSingle', "✓ " + this.files[0].name, true);
+            let r = new FileReader(); r.onload = (e) => singleImgSrc.src = e.target.result; r.readAsDataURL(this.files[0]);
+        });
 
-    document.getElementById('btnRunStMulti').addEventListener('click', async function() {
-        let box = document.getElementById('console-stage'); box.style.display = "block";
-        let files = document.getElementById('stMulti').files;
-        if(!files.length) { box.innerHTML = "❌ Sube archivos png."; return; }
+        document.getElementById('btnRunStSingle').addEventListener('click', function() {
+            let box = document.getElementById('console-stage'); box.style.display = "block";
+            if(!singleImgSrc.src) { box.innerHTML = "❌ Selecciona un archivo PNG individual."; return; }
+            let canvas = document.createElement('canvas');
+            canvas.width = Math.round(singleImgSrc.width * 0.85); canvas.height = Math.round(singleImgSrc.height * 0.85);
+            canvas.getContext('2d').drawImage(singleImgSrc, 0, 0, canvas.width, canvas.height);
+            download(canvas.toDataURL('image/png'), `${singleName}_optimized.png`);
+            box.innerHTML = "✓ ¡Asset individual optimizado!";
+        });
 
-        try {
-            for(let i=0; i<files.length; i++) {
-                let file = files[i];
-                box.innerHTML = `Comprimiendo sueltas [${i+1}/${files.length}]...`;
-                let img = await new Promise(res => { let r = new FileReader(); r.onload = (e) => { let im = new Image(); im.onload = () => res(im); im.src = e.target.result; }; r.readAsDataURL(file); });
-                let canvas = document.createElement('canvas');
-                canvas.width = Math.round(img.width * 0.85); canvas.height = Math.round(img.height * 0.85);
-                canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-                download(canvas.toDataURL('image/png'), file.name.replace(/\.[^/.]+$/, "") + "_optimized.png");
+        // --- LÓGICA 3: ADOBE ANIMATE JSON ---
+        let aImg = new Image(), aJson = null, aName = "spritemap1";
+        
+        document.getElementById('aniPng').addEventListener('change', function() {
+            if(!this.files.length) return;
+            aName = this.files[0].name.replace(/\.[^/.]+$/, "");
+            cambiarEstado('status-aniPng', "✓ " + this.files[0].name, true);
+            let r = new FileReader(); r.onload = (e) => aImg.src = e.target.result; r.readAsDataURL(this.files[0]);
+        });
+
+        document.getElementById('aniJson').addEventListener('change', function() {
+            if(!this.files.length) return;
+            cambiarEstado('status-aniJson', "✓ " + this.files[0].name, true);
+            let r = new FileReader(); r.onload = (e) => { try { aJson = JSON.parse(e.target.result); } catch(err) { alert("JSON Inválido"); } }; r.readAsText(this.files[0]);
+        });
+
+        document.getElementById('btnRunAni').addEventListener('click', function() {
+            let box = document.getElementById('console-ani'); box.style.display = "block";
+            if(!aJson || !aImg.src) { box.innerHTML = "❌ Carga los archivos .png y .json de Animate primero."; return; }
+            box.innerHTML = "Optimizado Spritemap...";
+
+            try {
+                let srcCanvas = document.createElement('canvas'); srcCanvas.width = aImg.width; srcCanvas.height = aImg.height;
+                srcCanvas.getContext('2d').drawImage(aImg, 0, 0);
+
+                let outCanvas = document.createElement('canvas'); let outCtx = outCanvas.getContext('2d');
+                let totalHeight = 0, maxWidth = 0;
+
+                for(let spr of aJson.meta.sprites) {
+                    if(spr.w > maxWidth) maxWidth = spr.w;
+                    totalHeight += spr.h + 4;
+                }
+                outCanvas.width = maxWidth + 4; outCanvas.height = totalHeight + 4;
+
+                let currentY = 2;
+                for(let spr of aJson.meta.sprites) {
+                    outCtx.drawImage(srcCanvas, spr.x, spr.y, spr.w, spr.h, 2, currentY, spr.w, spr.h);
+                    spr.x = 2;
+                    spr.y = currentY;
+                    currentY += spr.h + 4;
+                }
+
+                download(outCanvas.toDataURL('image/png'), `${aName}_optimized.png`);
+                download(URL.createObjectURL(new Blob([JSON.stringify(aJson, null, 2)], {type: "application/json"})), `${aName}_optimized.json`);
+                box.innerHTML = "✓ ¡Spritemap de Adobe Animate optimizado!";
+            } catch(err) {
+                box.innerHTML = "❌ Error: " + err.message;
             }
-            box.innerHTML = "✓ ¡Todas las imágenes múltiples optimizadas!";
-        } catch(err) {
-            box.innerHTML = "❌ Error: " + err.message;
-        }
-    });
-
-    let singleImgSrc = new Image(), singleName = "asset";
-    document.getElementById('stSingle').addEventListener('change', function() {
-        if(!this.files.length) return;
-        singleName = this.files[0].name.replace(/\.[^/.]+$/, "");
-        actualizarEstado('stSingle', "✓ " + this.files[0].name, "#10b981");
-        let r = new FileReader(); r.onload = (e) => singleImgSrc.src = e.target.result; r.readAsDataURL(this.files[0]);
-    });
-
-    document.getElementById('btnRunStSingle').addEventListener('click', function() {
-        let box = document.getElementById('console-stage'); box.style.display = "block";
-        if(!singleImgSrc.src) { box.innerHTML = "❌ Selecciona un archivo PNG individual."; return; }
-        let canvas = document.createElement('canvas');
-        canvas.width = Math.round(singleImgSrc.width * 0.85); canvas.height = Math.round(singleImgSrc.height * 0.85);
-        canvas.getContext('2d').drawImage(singleImgSrc, 0, 0, canvas.width, canvas.height);
-        download(canvas.toDataURL('image/png'), `${singleName}_optimized.png`);
-        box.innerHTML = "✓ ¡Asset individual optimizado!";
-    });
-
-    // --- LÓGICA 3: ADOBE ANIMATE JSON ---
-    let aImg = new Image(), aJson = null, aName = "spritemap1";
-    
-    document.getElementById('aniPng').addEventListener('change', function() {
-        if(!this.files.length) return;
-        aName = this.files[0].name.replace(/\.[^/.]+$/, "");
-        actualizarEstado('aniPng', "✓ " + this.files[0].name, "#10b981");
-        let r = new FileReader(); r.onload = (e) => aImg.src = e.target.result; r.readAsDataURL(this.files[0]);
-    });
-
-    document.getElementById('aniJson').addEventListener('change', function() {
-        if(!this.files.length) return;
-        actualizarEstado('aniJson', "✓ " + this.files[0].name, "#10b981");
-        let r = new FileReader(); r.onload = (e) => { try { aJson = JSON.parse(e.target.result); } catch(err) { alert("JSON Inválido"); } }; r.readAsText(this.files[0]);
-    });
-
-    document.getElementById('btnRunAni').addEventListener('click', function() {
-        let box = document.getElementById('console-ani'); box.style.display = "block";
-        if(!aJson || !aImg.src) { box.innerHTML = "❌ Carga los archivos .png y .json de Animate primero."; return; }
-        box.innerHTML = "Optimizado Spritemap...";
-
-        try {
-            let srcCanvas = document.createElement('canvas'); srcCanvas.width = aImg.width; srcCanvas.height = aImg.height;
-            srcCanvas.getContext('2d').drawImage(aImg, 0, 0);
-
-            let outCanvas = document.createElement('canvas'); let outCtx = outCanvas.getContext('2d');
-            let totalHeight = 0, maxWidth = 0;
-
-            for(let spr of aJson.meta.sprites) {
-                if(spr.w > maxWidth) maxWidth = spr.w;
-                totalHeight += spr.h + 4;
-            }
-            outCanvas.width = maxWidth + 4; outCanvas.height = totalHeight + 4;
-
-            let currentY = 2;
-            for(let spr of aJson.meta.sprites) {
-                outCtx.drawImage(srcCanvas, spr.x, spr.y, spr.w, spr.h, 2, currentY, spr.w, spr.h);
-                spr.x = 2;
-                spr.y = currentY;
-                currentY += spr.h + 4;
-            }
-
-            download(outCanvas.toDataURL('image/png'), `${aName}_optimized.png`);
-            download(URL.createObjectURL(new Blob([JSON.stringify(aJson, null, 2)], {type: "application/json"})), `${aName}_optimized.json`);
-            box.innerHTML = "✓ ¡Spritemap de Adobe Animate optimizado!";
-        } catch(err) {
-            box.innerHTML = "❌ Error: " + err.message;
-        }
-    });
-</script>
+        });
+    </script>
+</body>
+</html>
