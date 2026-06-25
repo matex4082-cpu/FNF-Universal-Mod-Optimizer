@@ -391,7 +391,7 @@
             box.innerHTML = "✓ ¡Asset individual optimizado!";
         });
 
-        // --- LÓGICA 3: ADOBE ANIMATE JSON (SOPORTA ARRAY Y HASH) ---
+      // --- LÓGICA 3: ADOBE ANIMATE / STARLING JSON (CORREGIDO) ---
         let aImg = new Image(), aJson = null, aName = "spritemap1";
         
         document.getElementById('aniPng').addEventListener('change', function() {
@@ -415,7 +415,7 @@
 
         document.getElementById('btnRunAni').addEventListener('click', function() {
             let box = document.getElementById('console-ani'); box.style.display = "block";
-            if(!aJson || !aImg.src) { box.innerHTML = "❌ Carga los archivos .png y .json de Animate primero."; return; }
+            if(!aJson || !aImg.src) { box.innerHTML = "❌ Carga los archivos .png y .json primero."; return; }
             box.innerHTML = "Optimizado Spritemap...";
 
             try {
@@ -425,49 +425,41 @@
                 let outCanvas = document.createElement('canvas'); let outCtx = outCanvas.getContext('2d');
                 let totalHeight = 0, maxWidth = 0;
 
-                let spritesList = [];
-                if (aJson.meta && aJson.meta.sprites) {
-                    if (Array.isArray(aJson.meta.sprites)) {
-                        spritesList = aJson.meta.sprites;
-                    } else {
-                        spritesList = Object.values(aJson.meta.sprites);
-                    }
+                // Captura la lista según tu formato exacto (ATLAS.SPRITES)
+                let rawSprites = [];
+                if (aJson.ATLAS && Array.isArray(aJson.ATLAS.SPRITES)) {
+                    rawSprites = aJson.ATLAS.SPRITES;
                 } else if (Array.isArray(aJson.sprites)) {
-                    spritesList = aJson.sprites;
+                    rawSprites = aJson.sprites;
+                } else {
+                    throw new Error("No se encontró la estructura ATLAS.SPRITES en el JSON.");
                 }
 
-                if (!spritesList || spritesList.length === 0) {
-                    throw new Error("No se encontraron sprites válidos en el JSON.");
-                }
-
-                for(let spr of spritesList) {
+                // Mapear y medir los sprites reales
+                for(let item of rawSprites) {
+                    let spr = item.SPRITE || item; // Soporta si viene envuelto en SPRITE o directo
                     if(spr.w > maxWidth) maxWidth = spr.w;
                     totalHeight += spr.h + 4;
                 }
                 outCanvas.width = maxWidth + 4; outCanvas.height = totalHeight + 4;
 
                 let currentY = 2;
-                for(let spr of spritesList) {
+                for(let item of rawSprites) {
+                    let spr = item.SPRITE || item;
+                    // Dibujar el sprite en la nueva textura vertical compacta
                     outCtx.drawImage(srcCanvas, spr.x, spr.y, spr.w, spr.h, 2, currentY, spr.w, spr.h);
+                    
+                    // Actualizar las coordenadas en el JSON original
                     spr.x = 2;
                     spr.y = currentY;
                     currentY += spr.h + 4;
                 }
 
-                if (aJson.meta && aJson.meta.sprites && !Array.isArray(aJson.meta.sprites)) {
-                    let keys = Object.keys(aJson.meta.sprites);
-                    for (let i = 0; i < keys.length; i++) {
-                        aJson.meta.sprites[keys[i]] = spritesList[i];
-                    }
-                }
-
+                // Descargar ambos archivos optimizados
                 download(outCanvas.toDataURL('image/png'), `${aName}_optimized.png`);
                 download(URL.createObjectURL(new Blob([JSON.stringify(aJson, null, 2)], {type: "application/json"})), `${aName}_optimized.json`);
-                box.innerHTML = "✓ ¡Spritemap de Adobe Animate optimizado!";
+                box.innerHTML = "✓ ¡Spritemap optimizado con éxito para FNF!";
             } catch(err) {
                 box.innerHTML = "❌ Error: " + err.message;
             }
         });
-    </script>
-</body>
-</html>
