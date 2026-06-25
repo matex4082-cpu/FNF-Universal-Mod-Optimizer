@@ -195,7 +195,6 @@
             let a = document.createElement('a'); a.download = name; a.href = url; a.click();
         }
 
-        // Cambiar estados de forma ultra segura protegiendo de bloqueos
         function cambiarEstado(id, texto, exito) {
             let el = document.getElementById(id);
             if(el) {
@@ -392,83 +391,83 @@
             box.innerHTML = "✓ ¡Asset individual optimizado!";
         });
 
-      // --- LÓGICA 3: ADOBE ANIMATE JSON (SOPORTA ARRAY Y HASH) ---
-    let aImg = new Image(), aJson = null, aName = "spritemap1";
-    
-    document.getElementById('aniPng').addEventListener('change', function() {
-        if(!this.files.length) return;
-        aName = this.files[0].name.replace(/\.[^/.]+$/, "");
-        cambiarEstado('status-aniPng', "✓ " + this.files[0].name, true);
-        let r = new FileReader(); r.onload = (e) => aImg.src = e.target.result; r.readAsDataURL(this.files[0]);
-    });
+        // --- LÓGICA 3: ADOBE ANIMATE JSON (SOPORTA ARRAY Y HASH) ---
+        let aImg = new Image(), aJson = null, aName = "spritemap1";
+        
+        document.getElementById('aniPng').addEventListener('change', function() {
+            if(!this.files.length) return;
+            aName = this.files[0].name.replace(/\.[^/.]+$/, "");
+            cambiarEstado('status-aniPng', "✓ " + this.files[0].name, true);
+            let r = new FileReader(); r.onload = (e) => aImg.src = e.target.result; r.readAsDataURL(this.files[0]);
+        });
 
-    document.getElementById('aniJson').addEventListener('change', function() {
-        if(!this.files.length) return;
-        cambiarEstado('status-aniJson', "✓ " + this.files[0].name, true);
-        let r = new FileReader(); r.onload = (e) => { 
-            try { 
-                aJson = JSON.parse(e.target.result); 
-            } catch(err) { 
-                alert("JSON Inválido"); 
-            } 
-        }; r.readAsText(this.files[0]);
-    });
+        document.getElementById('aniJson').addEventListener('change', function() {
+            if(!this.files.length) return;
+            cambiarEstado('status-aniJson', "✓ " + this.files[0].name, true);
+            let r = new FileReader(); r.onload = (e) => { 
+                try { 
+                    aJson = JSON.parse(e.target.result); 
+                } catch(err) { 
+                    alert("JSON Inválido"); 
+                } 
+            }; r.readAsText(this.files[0]);
+        });
 
-    document.getElementById('btnRunAni').addEventListener('click', function() {
-        let box = document.getElementById('console-ani'); box.style.display = "block";
-        if(!aJson || !aImg.src) { box.innerHTML = "❌ Carga los archivos .png y .json de Animate primero."; return; }
-        box.innerHTML = "Optimizado Spritemap...";
+        document.getElementById('btnRunAni').addEventListener('click', function() {
+            let box = document.getElementById('console-ani'); box.style.display = "block";
+            if(!aJson || !aImg.src) { box.innerHTML = "❌ Carga los archivos .png y .json de Animate primero."; return; }
+            box.innerHTML = "Optimizado Spritemap...";
 
-        try {
-            let srcCanvas = document.createElement('canvas'); srcCanvas.width = aImg.width; srcCanvas.height = aImg.height;
-            srcCanvas.getContext('2d').drawImage(aImg, 0, 0);
+            try {
+                let srcCanvas = document.createElement('canvas'); srcCanvas.width = aImg.width; srcCanvas.height = aImg.height;
+                srcCanvas.getContext('2d').drawImage(aImg, 0, 0);
 
-            let outCanvas = document.createElement('canvas'); let outCtx = outCanvas.getContext('2d');
-            let totalHeight = 0, maxWidth = 0;
+                let outCanvas = document.createElement('canvas'); let outCtx = outCanvas.getContext('2d');
+                let totalHeight = 0, maxWidth = 0;
 
-            // CONVERSIÓN CRÍTICA: Si meta.sprites es un objeto/hash, lo vuelve lista automáticamente
-            let spritesList = [];
-            if (aJson.meta && aJson.meta.sprites) {
-                if (Array.isArray(aJson.meta.sprites)) {
-                    spritesList = aJson.meta.sprites;
-                } else {
-                    // Si es un Hash, extrae los datos de los sprites correctamente
-                    spritesList = Object.values(aJson.meta.sprites);
+                let spritesList = [];
+                if (aJson.meta && aJson.meta.sprites) {
+                    if (Array.isArray(aJson.meta.sprites)) {
+                        spritesList = aJson.meta.sprites;
+                    } else {
+                        spritesList = Object.values(aJson.meta.sprites);
+                    }
+                } else if (Array.isArray(aJson.sprites)) {
+                    spritesList = aJson.sprites;
                 }
-            } else if (Array.isArray(aJson.sprites)) {
-                spritesList = aJson.sprites;
-            }
 
-            if (!spritesList || spritesList.length === 0) {
-                throw new Error("No se encontraron sprites válidos en el JSON.");
-            }
-
-            for(let spr of spritesList) {
-                if(spr.w > maxWidth) maxWidth = spr.w;
-                totalHeight += spr.h + 4;
-            }
-            outCanvas.width = maxWidth + 4; outCanvas.height = totalHeight + 4;
-
-            let currentY = 2;
-            for(let spr of spritesList) {
-                outCtx.drawImage(srcCanvas, spr.x, spr.y, spr.w, spr.h, 2, currentY, spr.w, spr.h);
-                spr.x = 2;
-                spr.y = currentY;
-                currentY += spr.h + 4;
-            }
-
-            // Guardar los cambios de vuelta en la estructura original del JSON
-            if (aJson.meta && aJson.meta.sprites && !Array.isArray(aJson.meta.sprites)) {
-                let keys = Object.keys(aJson.meta.sprites);
-                for (let i = 0; i < keys.length; i++) {
-                    aJson.meta.sprites[keys[i]] = spritesList[i];
+                if (!spritesList || spritesList.length === 0) {
+                    throw new Error("No se encontraron sprites válidos en el JSON.");
                 }
-            }
 
-            download(outCanvas.toDataURL('image/png'), `${aName}_optimized.png`);
-            download(URL.createObjectURL(new Blob([JSON.stringify(aJson, null, 2)], {type: "application/json"})), `${aName}_optimized.json`);
-            box.innerHTML = "✓ ¡Spritemap de Adobe Animate optimizado!";
-        } catch(err) {
-            box.innerHTML = "❌ Error: " + err.message;
-        }
-    });
+                for(let spr of spritesList) {
+                    if(spr.w > maxWidth) maxWidth = spr.w;
+                    totalHeight += spr.h + 4;
+                }
+                outCanvas.width = maxWidth + 4; outCanvas.height = totalHeight + 4;
+
+                let currentY = 2;
+                for(let spr of spritesList) {
+                    outCtx.drawImage(srcCanvas, spr.x, spr.y, spr.w, spr.h, 2, currentY, spr.w, spr.h);
+                    spr.x = 2;
+                    spr.y = currentY;
+                    currentY += spr.h + 4;
+                }
+
+                if (aJson.meta && aJson.meta.sprites && !Array.isArray(aJson.meta.sprites)) {
+                    let keys = Object.keys(aJson.meta.sprites);
+                    for (let i = 0; i < keys.length; i++) {
+                        aJson.meta.sprites[keys[i]] = spritesList[i];
+                    }
+                }
+
+                download(outCanvas.toDataURL('image/png'), `${aName}_optimized.png`);
+                download(URL.createObjectURL(new Blob([JSON.stringify(aJson, null, 2)], {type: "application/json"})), `${aName}_optimized.json`);
+                box.innerHTML = "✓ ¡Spritemap de Adobe Animate optimizado!";
+            } catch(err) {
+                box.innerHTML = "❌ Error: " + err.message;
+            }
+        });
+    </script>
+</body>
+</html>
